@@ -1,6 +1,5 @@
 package main
 
-import "io"
 import "fmt"
 import "net"
 import "net/http"
@@ -10,7 +9,7 @@ import "encoding/json"
 
 const httpPort = ":8080"
 
-var websocketconnections []websocket.Conn
+var websocketconnections []*websocket.Conn
 
 type Event struct {
     Type string
@@ -50,7 +49,9 @@ func startSyslogServer() {
 }
 
 func websocketOnConnect(ws *websocket.Conn) {
-    io.Copy(ws,ws)
+    fmt.Println("New connection added")
+    websocketconnections = append(websocketconnections, ws)
+    select{}
 }
 
 func twiddleThumbs() {
@@ -76,11 +77,8 @@ func messageAllWebsockets(msg []byte) {
         _, err := websocketconnection.Write(msg)
         if err != nil {
             websocketconnection.Close()
-
-            //remove i from array
-            wsclength := len(websocketconnections)
-            websocketconnections[i] = websocketconnections[wsclength-1]
-            websocketconnections = websocketconnections[:len(websocketconnections)-1]
+            fmt.Println("Failed to send message, removing ws connection")
+            websocketconnections = append(websocketconnections[:i], websocketconnections[i+1:]...)
         }
     }
 }

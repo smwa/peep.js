@@ -1,6 +1,33 @@
-<head>
+<!DOCTYPE HTML>
+<html>
+   <head>
+	
+      <script type="text/javascript">
+          var ws;
+          wsconnect();
 
-</head>
-<body>
+          ws.onopen = function() {
+//            alert('connected');
+          }
 
-</body>
+          ws.onmessage = function(evt) {
+            document.getElementById('info').innerHTML = document.getElementById('info').innerHTML + evt.data;
+          }
+
+          ws.onclose = function() {
+//            alert('connection closed');
+          }
+
+function wsconnect() {
+    ws = new WebSocket("ws://"+window.location.host+"/websocket");
+}
+      </script>
+		
+   </head>
+   <body>
+   
+      <div id="info">
+      </div>
+      
+   </body>
+</html>
