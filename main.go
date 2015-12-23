@@ -6,8 +6,10 @@ import "net/http"
 import "time"
 import "golang.org/x/net/websocket"
 import "encoding/json"
+import "gopkg.in/mcuadros/go-syslog.v2"
 
 const httpPort = ":8080"
+const syslogUdpPort = ":2000"
 
 var websocketconnections []*websocket.Conn
 
@@ -45,7 +47,29 @@ func startHttpServer() {
 }
 
 func startSyslogServer() {
+    channel := make(syslog.LogPartsChannel)
+    handler := syslog.NewChannelHandler(channel)
 
+    server := syslog.NewServer()
+    server.SetFormat(syslog.RFC5424)
+    server.SetHandler(handler)
+    server.ListenUDP(syslogUdpPort)
+    server.Boot()
+
+    go func(channel syslog.LogPartsChannel) {
+        for logParts := range channel {
+            event := Event{
+                Type: "Event",
+                Hostname: logParts["hostname"].(string),
+                Appname: logParts["app_name"].(string),
+                Severity: logParts["severity"].(int),
+            }
+
+            eventStringified, _ := json.Marshal(event)
+            messageAllWebsockets(eventStringified)
+            fmt.Println("syslog", logParts)
+        }
+    }(channel)
 }
 
 func websocketOnConnect(ws *websocket.Conn) {
@@ -55,20 +79,6 @@ func websocketOnConnect(ws *websocket.Conn) {
 }
 
 func twiddleThumbs() {
-    for {
-        time.Sleep(3 * time.Second)
-
-        event := Event{
-            Type: "Event",
-            Hostname: "exampleserver",
-            Appname: "Apache2",
-            Severity: 1,
-        }
-
-        eventStringified, _ := json.Marshal(event)
-
-        messageAllWebsockets(eventStringified)
-    }
     select{}
 }
 
