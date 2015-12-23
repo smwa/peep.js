@@ -6,10 +6,25 @@ import "net"
 import "net/http"
 import "time"
 import "golang.org/x/net/websocket"
+import "encoding/json"
 
 const httpPort = ":8080"
 
 var websocketconnections []websocket.Conn
+
+type Event struct {
+    Type string
+    Hostname string
+    Appname string
+    Severity int
+}
+
+type State struct {
+    Type string
+    Hostname string
+    Appname string
+    Intensity float64
+}
 
 func main() {
     http.Handle("/", http.FileServer(http.Dir("static")))
@@ -41,17 +56,24 @@ func websocketOnConnect(ws *websocket.Conn) {
 func twiddleThumbs() {
     for {
         time.Sleep(3 * time.Second)
-        messageAllWebsockets([]byte("Hello"))
+
+        event := Event{
+            Type: "Event",
+            Hostname: "exampleserver",
+            Appname: "Apache2",
+            Severity: 1,
+        }
+
+        eventStringified, _ := json.Marshal(event)
+
+        messageAllWebsockets(eventStringified)
     }
     select{}
 }
 
 func messageAllWebsockets(msg []byte) {
     for i,websocketconnection := range websocketconnections {
-        index, err := websocketconnection.Write(msg)
-        if index < 0 {
-            fmt.Println("i need to get rid of the index assignment")
-        }
+        _, err := websocketconnection.Write(msg)
         if err != nil {
             websocketconnection.Close()
 
