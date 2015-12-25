@@ -1,17 +1,21 @@
 package main
 
-import "fmt"
+import "log"
+import "os"
+import "io"
+import "io/ioutil"
 import "net"
 import "net/http"
 import "time"
-import "golang.org/x/net/websocket"
 import "encoding/json"
+import "golang.org/x/net/websocket"
 import "gopkg.in/mcuadros/go-syslog.v2"
 
 const httpPort = ":8080"
 const syslogUdpPort = ":2000"
 
 var websocketconnections []*websocket.Conn
+var Debug *log.Logger
 
 type Event struct {
     Type string
@@ -28,6 +32,13 @@ type State struct {
 }
 
 func main() {
+    var iow io.Writer
+    if len(os.Args) > 1 && os.Args[1] == "--debug" {
+        iow = os.Stdout
+    } else {
+        iow = ioutil.Discard
+    }
+    Debug = log.New(iow, "Debug: ", log.Ldate|log.Ltime|log.Lshortfile)
     http.Handle("/", http.FileServer(http.Dir("static")))
     http.Handle("/websocket", websocket.Handler(websocketOnConnect))
     startHttpServer()
@@ -38,12 +49,12 @@ func main() {
 func startHttpServer() {
     staticListener, err := net.Listen("tcp", httpPort)
     if err != nil {
-        fmt.Println("Creating http server failed: ", err)
-        fmt.Println("Retrying in 5")
+        Debug.Println("Creating http server failed: ", err)
+        Debug.Println("Retrying in 5")
         time.Sleep(5 * time.Second)
     }
     go http.Serve(staticListener, nil);
-    fmt.Println("Started http server")
+    Debug.Println("Started http server")
 }
 
 func startSyslogServer() {
@@ -51,7 +62,7 @@ func startSyslogServer() {
     handler := syslog.NewChannelHandler(channel)
 
     server := syslog.NewServer()
-    server.SetFormat(syslog.RFC5424)
+    server.SetFormat(syslog.RFC3164)
     server.SetHandler(handler)
     server.ListenUDP(syslogUdpPort)
     server.Boot()
@@ -60,20 +71,25 @@ func startSyslogServer() {
         for logParts := range channel {
             event := Event{
                 Type: "Event",
-                Hostname: logParts["hostname"].(string),
-                Appname: logParts["app_name"].(string),
-                Severity: logParts["severity"].(int),
             }
-
+            if val, ok := logParts["hostname"]; ok {
+                event.Hostname = val.(string);
+            }
+            if val, ok := logParts["app_name"]; ok {
+                event.Appname = val.(string);
+            }
+            if val, ok := logParts["severity"]; ok {
+                event.Severity = val.(int);
+            }
             eventStringified, _ := json.Marshal(event)
             messageAllWebsockets(eventStringified)
-            fmt.Println("syslog", logParts)
+            Debug.Println("syslog ", logParts)
         }
     }(channel)
 }
 
 func websocketOnConnect(ws *websocket.Conn) {
-    fmt.Println("New connection added")
+    Debug.Println("New connection added")
     websocketconnections = append(websocketconnections, ws)
     select{}
 }
@@ -87,8 +103,9 @@ func messageAllWebsockets(msg []byte) {
         _, err := websocketconnection.Write(msg)
         if err != nil {
             websocketconnection.Close()
-            fmt.Println("Failed to send message, removing ws connection")
+            Debug.Println("Failed to send message, removing ws connection")
             websocketconnections = append(websocketconnections[:i], websocketconnections[i+1:]...)
         }
     }
 }
+
