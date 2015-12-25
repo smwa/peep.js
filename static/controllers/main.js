@@ -22,10 +22,12 @@ angular.module('app', [])
         $scope.websocketconnection = new WebSocket("ws://"+$location.host()+":"+$location.port()+"/websocket");
         $scope.websocketconnection.onopen = function() {
             $scope.errors = [];
+            $scope.$apply();
         }
         $scope.websocketconnection.onclose = function() {
             $scope.errors = ["Connection failed, trying to reconnect"];
             setTimeout(connect, 1000);
+            $scope.$apply();
         }
         $scope.websocketconnection.onmessage = function(evt){ onMessage(evt); };
     }
