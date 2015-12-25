@@ -22,6 +22,7 @@ type Event struct {
     Hostname string
     Appname string
     Severity int
+    Content string
 }
 
 type State struct {
@@ -33,7 +34,7 @@ type State struct {
 
 func main() {
     var iow io.Writer
-    if len(os.Args) > 1 && os.Args[1] == "--debug" {
+    if os.Getenv("DEBUG") != "" {
         iow = os.Stdout
     } else {
         iow = ioutil.Discard
@@ -75,11 +76,17 @@ func startSyslogServer() {
             if val, ok := logParts["hostname"]; ok {
                 event.Hostname = val.(string);
             }
+            if val, ok := logParts["tag"]; ok {
+                event.Appname = val.(string);
+            }
             if val, ok := logParts["app_name"]; ok {
                 event.Appname = val.(string);
             }
             if val, ok := logParts["severity"]; ok {
                 event.Severity = val.(int);
+            }
+            if val, ok := logParts["content"]; ok {
+                event.Content = val.(string);
             }
             eventStringified, _ := json.Marshal(event)
             messageAllWebsockets(eventStringified)

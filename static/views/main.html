@@ -1,0 +1,52 @@
+<div class="row">
+    <div class="col-md-12">
+        <div ng-repeat="error in errors">
+	        <div class="alert alert-danger">{{error}}</div>
+        </div>
+        <div class="alert alert-info" ng-hide="events.length">No events yet</div>
+        <table ng-show="events.length" class="table">
+            <thead>
+                <tr>
+                    <th>Host Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="host in events">
+                    <td>{{host.Hostname}}</td>
+                    <td>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>App Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="app in host.Apps">
+                                    <td>{{app.Appname}}</td>
+                                    <td>
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Volume</th>
+                                                    <th>Severity</th>
+                                                    <th>Count</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr ng-repeat="severity in app.Severities">
+                                                    <td><input ng-model="severity.Volume" type="range" min="0" max="1" step="0.1" /></td>
+                                                    <td>{{severity.Severity}}</td>
+                                                    <td>{{severity.Count}}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody
+        </table>
+    </div>
+</div>
