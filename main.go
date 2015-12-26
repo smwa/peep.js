@@ -22,7 +22,6 @@ type Event struct {
     Hostname string
     Appname string
     Severity int
-    Content string
 }
 
 type State struct {
@@ -49,10 +48,11 @@ func main() {
 
 func startHttpServer() {
     staticListener, err := net.Listen("tcp", httpPort)
-    if err != nil {
+    for err != nil {
         Debug.Println("Creating http server failed: ", err)
         Debug.Println("Retrying in 5")
         time.Sleep(5 * time.Second)
+        staticListener, err = net.Listen("tcp", httpPort)
     }
     go http.Serve(staticListener, nil);
     Debug.Println("Started http server")
@@ -84,9 +84,6 @@ func startSyslogServer() {
             }
             if val, ok := logParts["severity"]; ok {
                 event.Severity = val.(int);
-            }
-            if val, ok := logParts["content"]; ok {
-                event.Content = val.(string);
             }
             eventStringified, _ := json.Marshal(event)
             messageAllWebsockets(eventStringified)
