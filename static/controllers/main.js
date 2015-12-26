@@ -16,7 +16,22 @@ angular.module('app', [])
         "7": "Debug"
     };
 
+    var AudioSets = {
+        "StarTrek": {
+            "Events": {
+                "0": "StarTrek/tng_torpedo_clean.mp3",
+                "1": "StarTrek/tos_ship_phase_1.mp3",
+                "2": "StarTrek/tos_tricoder_alert.mp3",
+                "3": "StarTrek/tos_chirp_5.mp3",
+                "4": "StarTrek/computerbeep_22.mp3",
+                "5": "StarTrek/tng_viewscreen_off.mp3",
+                "6": "StarTrek/hypospray2_clean.mp3",
+                "7": "StarTrek/communications_start_transmission.mp3",
+            }
+        }
+    };
 
+    $scope.CurrentAudioSet = "StarTrek";
 
     function connect() {
         $scope.websocketconnection = new WebSocket("ws://"+$location.host()+":"+$location.port()+"/websocket");
@@ -26,7 +41,7 @@ angular.module('app', [])
         }
         $scope.websocketconnection.onclose = function() {
             $scope.errors = ["Connection failed, trying to reconnect"];
-            setTimeout(connect, 1000);
+            setTimeout(connect, 999);
             $scope.$apply();
         }
         $scope.websocketconnection.onmessage = function(evt){ onMessage(evt); };
@@ -96,9 +111,21 @@ angular.module('app', [])
     connect();
 
 
-    $scope.audio = new window.AudioContext();
+    //$scope.audio = new window.AudioContext();
+    var AudiosPoolPositionTracker = 0;
+    var AudiosPoolSize = 5;
+    var AudiosPool = [];
+    for (var i = 0; i < AudiosPoolSize; i++) {
+        AudiosPool.push(new Audio());
+    }
 
     function playEventSound(evt, volume) {
+        var sound = AudiosPool[AudiosPoolPositionTracker++];
+        sound.src = "audio/"+AudioSets[$scope.CurrentAudioSet].Events[evt.Severity];
+        sound.volume = volume;
+        sound.play();
+        AudiosPoolPositionTracker = AudiosPoolPositionTracker % 5;
+        /*
         freqmap = {
             "0": 261.626,
             "1": 329.628,
@@ -110,6 +137,7 @@ angular.module('app', [])
             "7": 1567.982
         };
         playNote(freqmap[evt.Severity], volume);
+        */
     }
 
     function playNote(freq, volume) {
