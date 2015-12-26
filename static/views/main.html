@@ -12,7 +12,15 @@
             </thead>
             <tbody>
                 <tr ng-repeat="host in events">
-                    <td>{{host.Hostname}}</td>
+                    <td>
+                        {{host.Hostname}}
+                        <hr>
+                        CPU: {{host.CpuUsage | percentage:2}}
+                        <input ng-model="host.CpuVolume" type="range" min="0" max="1" step="0.1" />
+                        <hr>
+                        Mem: {{host.MemoryUsage | percentage:2}}
+                        <input ng-model="host.MemoryVolume" type="range" min="0" max="1" step="0.1" />
+                    </td>
                     <td>
                         <table class="table">
                             <thead>

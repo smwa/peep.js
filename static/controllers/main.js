@@ -1,4 +1,9 @@
 angular.module('app', [])
+  .filter('percentage', ['$filter', function ($filter) {
+    return function (input, decimals) {
+      return $filter('number')(input * 100, decimals) + '%';
+    };
+  }])
   .controller('mainController', function($scope, $location) {
 
     //$scope.events = [{Hostname: "smwa.me", Apps: [{Appname: "Apache2", Severities: [{Severity: 3, Count: 4}]}]}];
@@ -20,7 +25,7 @@ angular.module('app', [])
         "StarTrek": {
             "Events": {
                 "0": "StarTrek/tng_torpedo_clean.mp3",
-                "1": "StarTrek/tos_ship_phase_1.mp3",
+                "1": "StarTrek/tos_ship_phaser_1.mp3",
                 "2": "StarTrek/tos_tricoder_alert.mp3",
                 "3": "StarTrek/tos_chirp_5.mp3",
                 "4": "StarTrek/computerbeep_22.mp3",
@@ -47,17 +52,8 @@ angular.module('app', [])
         $scope.websocketconnection.onmessage = function(evt){ onMessage(evt); };
     }
 
-    function saveSeverity(evt) {
-
-    }
-
     function onMessage(evt) {
         evt = JSON.parse(evt.data);
-        if(evt.hasOwnProperty("Intensity")) {
-            saveSeverity(evt);
-            $scope.$apply();
-            return;
-        }
         if(evt.Appname == "") {
             evt.Appname = "N/A";
         }
@@ -72,8 +68,22 @@ angular.module('app', [])
             }
         }
         if (hostid < 0) {
-            $scope.events.push({Hostname: evt.Hostname, Apps: []});
+            $scope.events.push({Hostname: evt.Hostname, CpuUsage: 0, CpuVolume: 1, MemoryUsage: 0, MemoryVolume: 1, Apps: []});
             hostid = $scope.events.length - 1;
+        }
+
+        //states
+        if (evt.Appname == "cpu_state") {
+            $scope.events[hostid].CpuUsage = parseFloat(evt.Intensity);
+            //affect sound
+            $scope.$apply();
+            return;
+        }
+        if (evt.Appname == "memory_state") {
+            $scope.events[hostid].MemoryUsage = parseFloat(evt.Intensity);
+            //affect sound
+            $scope.$apply();
+            return;
         }
 
         //App

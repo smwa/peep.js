@@ -7,6 +7,7 @@ import "io/ioutil"
 import "net"
 import "net/http"
 import "time"
+import "strconv"
 import "encoding/json"
 import "golang.org/x/net/websocket"
 import "gopkg.in/mcuadros/go-syslog.v2"
@@ -22,12 +23,6 @@ type Event struct {
     Hostname string
     Appname string
     Severity int
-}
-
-type State struct {
-    Type string
-    Hostname string
-    Appname string
     Intensity float64
 }
 
@@ -70,6 +65,7 @@ func startSyslogServer() {
 
     go func(channel syslog.LogPartsChannel) {
         for logParts := range channel {
+            Debug.Println("syslog ", logParts)
             event := Event{
                 Type: "Event",
             }
@@ -85,9 +81,14 @@ func startSyslogServer() {
             if val, ok := logParts["severity"]; ok {
                 event.Severity = val.(int);
             }
+
+            //state
+            if event.Appname == "cpu_state" || event.Appname == "memory_state" {
+                event.Intensity, _ = strconv.ParseFloat(logParts["content"].(string), 64)
+            }
+
             eventStringified, _ := json.Marshal(event)
             messageAllWebsockets(eventStringified)
-            Debug.Println("syslog ", logParts)
         }
     }(channel)
 }
