@@ -30,16 +30,16 @@ do
     #swapon --show=Size,Used --noheadings --bytes | while read x; do
     while read x
     do
-        swaptotalmemory=$(echo $(echo "$x" | cut -d' ' -f1) "/1048576" | bc -l)
-        swapusedmemory=`echo $(echo $x | cut -d' ' -f2)"/1048576" | bc -l`
+        swaptotalmemory=`echo $(echo $x | cut -d' ' -f3) "/1024" | bc -l`
+        swapusedmemory=`echo $(echo $x | cut -d' ' -f4)"/1024" | bc -l`
         totalmemory=$(echo "$totalmemory+$swaptotalmemory" | bc -l)
         usedmemory=$(echo "$usedmemory+$swapusedmemory" | bc -l)
-    done <<< "`swapon --show=Size,Used --noheadings --bytes`"
+    done <<< "`swapon -s | tail -n +2`"
 
     memoryusage=0`echo "$usedmemory/$totalmemory" | bc -l`
 
     logger -p kern.info -t cpu_state $cpuusage
     logger -p kern.info -t memory_state $memoryusage
-    sleep 1
+    sleep 10
 done
 
