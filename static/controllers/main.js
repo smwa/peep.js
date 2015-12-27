@@ -6,7 +6,6 @@ angular.module('app', [])
   }])
   .controller('mainController', function($scope, $location) {
 
-    //$scope.events = [{Hostname: "smwa.me", Apps: [{Appname: "Apache2", Severities: [{Severity: 3, Count: 4}]}]}];
     $scope.events = [];
     $scope.errors = [];
 
@@ -39,11 +38,11 @@ angular.module('app', [])
     $scope.CurrentAudioSet = "StarTrek";
 
     function connect() {
-        var protocol = "ws";
+        var protocol = "ws:";
         if (window.location.protocol == "https:") {
-            protocol = "wss";
+            protocol = "wss:";
         }
-        $scope.websocketconnection = new WebSocket("ws://"+$location.host()+":"+$location.port()+"/websocket");
+        $scope.websocketconnection = new WebSocket(protocol+"//"+$location.host()+":"+$location.port()+"/websocket");
         $scope.websocketconnection.onopen = function() {
             $scope.errors = [];
             $scope.$apply();
