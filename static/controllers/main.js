@@ -39,6 +39,10 @@ angular.module('app', [])
     $scope.CurrentAudioSet = "StarTrek";
 
     function connect() {
+        var protocol = "ws";
+        if (window.location.protocol == "https:") {
+            protocol = "wss";
+        }
         $scope.websocketconnection = new WebSocket("ws://"+$location.host()+":"+$location.port()+"/websocket");
         $scope.websocketconnection.onopen = function() {
             $scope.errors = [];
