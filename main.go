@@ -26,7 +26,7 @@ type Event struct {
     Intensity float64
 }
 
-func main() {
+func init() {
     var iow io.Writer
     if os.Getenv("DEBUG") != "" {
         iow = os.Stdout
@@ -34,14 +34,17 @@ func main() {
         iow = ioutil.Discard
     }
     Debug = log.New(iow, "Debug: ", log.Ldate|log.Ltime|log.Lshortfile)
-    http.Handle("/", http.FileServer(http.Dir("static")))
-    http.Handle("/websocket", websocket.Handler(websocketOnConnect))
-    startHttpServer()
-    startSyslogServer()
-    twiddleThumbs()
+}
+
+func main() {
+    go startHttpServer()
+    go startSyslogServer()
+    select{}
 }
 
 func startHttpServer() {
+    http.Handle("/", http.FileServer(http.Dir("static")))
+    http.Handle("/websocket", websocket.Handler(websocketOnConnect))
     staticListener, err := net.Listen("tcp", httpPort)
     for err != nil {
         Debug.Println("Creating http server failed: ", err)
@@ -49,8 +52,8 @@ func startHttpServer() {
         time.Sleep(5 * time.Second)
         staticListener, err = net.Listen("tcp", httpPort)
     }
-    go http.Serve(staticListener, nil);
     Debug.Println("Started http server")
+    http.Serve(staticListener, nil);
 }
 
 func startSyslogServer() {
@@ -62,44 +65,45 @@ func startSyslogServer() {
     server.SetHandler(handler)
     server.ListenUDP(syslogUdpPort)
     server.Boot()
-
-    go func(channel syslog.LogPartsChannel) {
-        for logParts := range channel {
-            Debug.Println("syslog ", logParts)
-            event := Event{
-                Type: "Event",
-            }
-            if val, ok := logParts["hostname"]; ok {
-                event.Hostname = val.(string);
-            }
-            if val, ok := logParts["tag"]; ok {
-                event.Appname = val.(string);
-            }
-            if val, ok := logParts["app_name"]; ok {
-                event.Appname = val.(string);
-            }
-            if val, ok := logParts["severity"]; ok {
-                event.Severity = val.(int);
-            }
-
-            //state
-            if event.Appname == "cpu_state" || event.Appname == "memory_state" {
-                event.Intensity, _ = strconv.ParseFloat(logParts["content"].(string), 64)
-            }
-
-            eventStringified, _ := json.Marshal(event)
-            messageAllWebsockets(eventStringified)
-        }
-    }(channel)
+    processLogparts(channel)
 }
+
+func processLogparts(channel syslog.LogPartsChannel) {
+    for logParts := range channel {
+        Debug.Println("syslog ", logParts)
+        event := Event{
+            Type: "Event",
+        }
+        if val, ok := logParts["hostname"]; ok {
+            event.Hostname = val.(string);
+        }
+        if val, ok := logParts["tag"]; ok {
+            event.Appname = val.(string);
+        }
+        if val, ok := logParts["app_name"]; ok {
+            event.Appname = val.(string);
+        }
+        if val, ok := logParts["severity"]; ok {
+            event.Severity = val.(int);
+        }
+        //state
+        if event.Appname == "cpu_state" || event.Appname == "memory_state" {
+            event.Intensity, _ = strconv.ParseFloat(logParts["content"].(string), 64)
+        }
+        eventStringified, _ := json.Marshal(event)
+        messageAllWebsockets(eventStringified)
+    }
+}
+
 
 func websocketOnConnect(ws *websocket.Conn) {
     Debug.Println("New connection added")
     websocketconnections = append(websocketconnections, ws)
-    select{}
-}
-
-func twiddleThumbs() {
+    defer func() {
+        if err := ws.Close(); err != nil {
+            Debug.Println("Websocket could not be closed", err.Error())
+        }
+    }()
     select{}
 }
 
